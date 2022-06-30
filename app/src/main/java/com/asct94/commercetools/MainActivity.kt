@@ -13,10 +13,10 @@ import com.commercetools.api.models.me.MyCartDraft
 import com.commercetools.api.models.me.MyCartUpdate
 import com.commercetools.api.models.me.MyCartUpdateAction
 import com.commercetools.api.models.product.Product
-import com.commercetools.api.models.product.ProductPagedQueryResponse
-import io.vrap.rmf.base.client.ApiHttpResponse
 import io.vrap.rmf.base.client.oauth2.ClientCredentials
-import java.util.concurrent.CompletableFuture
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,23 +31,23 @@ class MainActivity : AppCompatActivity() {
         setupSdkAnonymous()
 
         findViewById<Button>(R.id.btProducts).setOnClickListener {
-            getProducts()
+            GlobalScope.launch(Dispatchers.Main) { getProducts() }
         }
 
         findViewById<Button>(R.id.btMyCarts).setOnClickListener {
-            showCarts()
+            GlobalScope.launch(Dispatchers.Main) { showCarts() }
         }
 
         findViewById<Button>(R.id.btActiveCart).setOnClickListener {
-            activeCart()
+            GlobalScope.launch(Dispatchers.Main) { activeCart() }
         }
 
         findViewById<Button>(R.id.btNewCart).setOnClickListener {
-            createCart()
+            GlobalScope.launch(Dispatchers.Main) { createCart() }
         }
 
         findViewById<Button>(R.id.btAddProductToCart).setOnClickListener {
-            addProductToCart()
+            GlobalScope.launch(Dispatchers.Main) { addProductToCart() }
         }
     }
 
@@ -63,13 +63,9 @@ class MainActivity : AppCompatActivity() {
         ).build(PROJECT_KEY)
     }
 
-    private fun getProducts() {
-        val future: CompletableFuture<ApiHttpResponse<ProductPagedQueryResponse>> =
-            api.products()
-                .get()
-                .execute()
-        val response = future.get()
-        val productList = response.body.results
+    private suspend fun getProducts() {
+        val result = api.products().get().makeCall()
+        val productList = result.results
         this.productList = productList
 
         Toast.makeText(this, "${productList.size} products", Toast.LENGTH_SHORT).show()
@@ -77,9 +73,10 @@ class MainActivity : AppCompatActivity() {
         Log.e("ASCT", productList.map { it.masterData.current.name.get("en-us") }.toString())
     }
 
-    private fun showCarts() {
-        val future = api.me().carts().get().execute()
-        val myCarts = future.get().body.results
+
+    private suspend fun showCarts() {
+        val result = api.me().carts().get().makeCall()
+        val myCarts = result.results
 
         if (myCarts.size > 1) {
             Toast.makeText(this, "${myCarts.size} carts", Toast.LENGTH_SHORT).show()
@@ -94,9 +91,9 @@ class MainActivity : AppCompatActivity() {
 //        Log.e("ASCT", productList.map { it.masterData.current.name.get("en-us") }.toString())
     }
 
-    private fun activeCart() {
-        val future = api.me().activeCart().get().execute()
-        val activeCart = future.get().body.get()
+    private suspend fun activeCart() {
+        val result = api.me().activeCart().get().makeCall()
+        val activeCart = result.get()
 
         saveActiveCart(activeCart)
 
@@ -108,12 +105,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createCart() {
+    private suspend fun createCart() {
         val cart = MyCartDraft.builder()
             .currency("USD")
             .build()
-        val future = api.me().carts().post(cart).execute()
-        val newCart = future.get().body.get()
+        val result = api.me().carts().post(cart).makeCall()
+        val newCart = result.get()
         val newCartId = newCart.id
 
         saveActiveCart(newCart)
@@ -121,7 +118,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "New Cart created!\n$newCartId", Toast.LENGTH_SHORT).show()
     }
 
-    private fun addProductToCart() {
+    private suspend fun addProductToCart() {
         if (activeCartId == null) {
             Toast.makeText(this, "No active cart", Toast.LENGTH_SHORT).show()
             return
@@ -141,8 +138,8 @@ class MainActivity : AppCompatActivity() {
                     .build()
             )
             .build()
-        val future = api.me().carts().withId(activeCartId).post(cartUpdate).execute()
-        val updatedCart = future.get().body.get()
+        val result = api.me().carts().withId(activeCartId).post(cartUpdate).makeCall()
+        val updatedCart = result.get()
         saveActiveCart(updatedCart)
 
         Toast.makeText(this, "Cart updated!", Toast.LENGTH_SHORT).show()

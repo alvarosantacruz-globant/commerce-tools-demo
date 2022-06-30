@@ -46,4 +46,6 @@ dependencies {
     implementation "com.commercetools.sdk:commercetools-sdk-java-api:$commercetools"
     implementation "com.commercetools.sdk:commercetools-sdk-java-importapi:$commercetools"
     implementation "com.commercetools.sdk:commercetools-sdk-java-ml:$commercetools"
+
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.0'
 }
